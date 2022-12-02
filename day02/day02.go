@@ -5,16 +5,28 @@ import (
 	"fmt"
 )
 
-type RockPaperScissors int
+type Move int
 const (
-    Rock RockPaperScissors = 1
-    Paper                  = 2
-    Scissors               = 3
+    Rock        Move = iota
+    Paper
+    Scissors
 )
 
-type Game struct {
-    you         RockPaperScissors
-    opponent    RockPaperScissors
+type Outcome int
+const (
+    Lose        Outcome = iota
+    Draw
+    Win
+)
+
+type Game1 struct {
+    opponent    Move
+    you         Move
+}
+
+type Game2 struct {
+    opponent    Move
+    outcome     Outcome
 }
 
 func main() {
@@ -22,20 +34,31 @@ func main() {
 	lines := aoc.GetInputLines(filename)
 
 	fmt.Println(part1(lines))
+	fmt.Println(part2(lines))
 }
 
 func part1(lines []string) int {
     total := 0
 
 	for _, line := range lines {
-        game := parseGame(line)
-        //fmt.Println(RPS(game.opponent), RPS(game.you), game.score())
+        game := parseGame1(line)
         total += game.score()
 	}
 	return total
 }
 
-func RPS(rps RockPaperScissors) string {
+func part2(lines []string) int {
+    total := 0
+
+	for _, line := range lines {
+        game2 := parseGame2(line)
+        game1 := game2.solve()
+        total += game1.score()
+	}
+	return total
+}
+
+func RPS(rps Move) string {
     switch rps {
     case Rock: return "R1"
     case Paper: return "P2"
@@ -44,40 +67,53 @@ func RPS(rps RockPaperScissors) string {
     return "-"
 }
 
-func (this Game) score() int {
+func (this Game1) score() int {
+    base := this.you.value()
     if this.you == this.opponent {
-        return 3 + int(this.you)
+        return 3 + base
     }
-    if this.you.beats(this.opponent) {
-        return 6 + int(this.you)
+    if this.you.beats() == this.opponent {
+        return 6 + base
     }
-    return int(this.you)
+    return base
 }
 
-func (this RockPaperScissors) beats (that RockPaperScissors) bool {
-    switch this {
-    case Rock: return that == Scissors
-    case Paper: return that == Rock
-    case Scissors: return that == Paper
-    }
-    return false
-}
+func (this Game2) solve() Game1 {
+    game := Game1{}
+    game.opponent = this.opponent
 
-func parseGame(line string) Game {
-    game := Game{}
-    game.opponent = parseRockPaperScissors(line[0])
-    game.you      = parseRockPaperScissors(line[2])
+    if this.outcome == Lose {
+        game.you = this.opponent.beats()
+    } else if this.outcome == Win {
+        game.you = this.opponent.losesTo()
+    } else {
+        game.you = this.opponent
+    }
     return game
 }
 
-func parseRockPaperScissors(c byte) RockPaperScissors {
-    switch c {
-    case 'A': return Rock
-    case 'B': return Paper
-    case 'C': return Scissors
-    case 'X': return Rock
-    case 'Y': return Paper
-    case 'Z': return Scissors
-    }
-    return Rock
+func (this Move) beats() Move {
+    return (this - 1 + 3) % 3
+}
+
+func (this Move) losesTo() Move {
+    return (this + 1) % 3
+}
+
+func (this Move) value() int {
+    return int(this) + 1
+}
+
+func parseGame1(line string) Game1 {
+    game := Game1{}
+    game.opponent = Move(line[0] - 'A')
+    game.you      = Move(line[2] - 'X')
+    return game
+}
+
+func parseGame2(line string) Game2 {
+    game := Game2{}
+    game.opponent = Move(line[0] - 'A')
+    game.outcome  = Outcome(line[2] - 'X')
+    return game
 }

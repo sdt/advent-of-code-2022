@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  pg:
+    image: postgres:15
+    environment:
+      POSTGRES_PASSWORD: password
+
+  aoc:
+    image: postgres:15
+    environment:
+      PGHOST: pg
+      PGPASSWORD: password
+      PGUSER: postgres
+    depends_on:
+      - pg
+    command: bash
+    volumes:
+      - .:/aoc
+    working_dir: /aoc
+

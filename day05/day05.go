@@ -13,13 +13,14 @@ type Move struct {
     from, to, howMany int
 }
 
-const debug = true
+const debug = !true
 
 func main() {
 	filename := aoc.GetFilename()
 	input := aoc.Slurp(filename)
 
 	fmt.Println(part1(input))
+	fmt.Println(part2(input))
 }
 
 func part1(input string) string {
@@ -28,7 +29,7 @@ func part1(input string) string {
     printStacks(stacks)
 
     for _, move := range moves {
-        stacks = applyMove(stacks, move)
+        stacks = applyMove9000(stacks, move)
         printStacks(stacks)
     }
 
@@ -39,7 +40,24 @@ func part1(input string) string {
     return ret
 }
 
-func applyMove(stacks []Stack, move Move) []Stack {
+func part2(input string) string {
+    stacks, moves := parseInput(input)
+
+    printStacks(stacks)
+
+    for _, move := range moves {
+        stacks = applyMove9001(stacks, move)
+        printStacks(stacks)
+    }
+
+    ret := ""
+    for _, stack := range stacks {
+        ret = fmt.Sprintf("%s%c", ret, stack[len(stack)-1])
+    }
+    return ret
+}
+
+func applyMove9000(stacks []Stack, move Move) []Stack {
     if debug {
         fmt.Printf("Move %d from %d to %d\n", move.howMany, move.from, move.to);
     }
@@ -48,6 +66,23 @@ func applyMove(stacks []Stack, move Move) []Stack {
 
     for i := 0; i < move.howMany; i++ {
         to = append(to, from[len(from) - i - 1])
+    }
+
+    stacks[move.to - 1] = to
+    stacks[move.from - 1] = from[0:len(from) - move.howMany]
+
+    return stacks
+}
+
+func applyMove9001(stacks []Stack, move Move) []Stack {
+    if debug {
+        fmt.Printf("Move %d from %d to %d\n", move.howMany, move.from, move.to);
+    }
+    from := stacks[move.from - 1]
+    to   := stacks[move.to - 1]
+
+    for i := 0; i < move.howMany; i++ {
+        to = append(to, from[len(from) - move.howMany + i])
     }
 
     stacks[move.to - 1] = to
@@ -113,7 +148,6 @@ func parseMoves(input string) []Move {
 }
 
 func parseMove(line string) Move {
-    fmt.Println("move:", line)
     words := strings.Split(line, " ");
     return Move{
         howMany: aoc.ParseInt(words[1]),

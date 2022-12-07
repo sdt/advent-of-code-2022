@@ -24,12 +24,26 @@ func main() {
     lines := aoc.GetInputLines(filename)
 
     fmt.Println(part1(lines))
+    fmt.Println(part2(lines))
 }
 
 func part1(lines []string) int {
     root := ParseInput(lines)
     ComputeSize(root)
     return SumSmallDirs(root)
+}
+
+func part2(lines []string) int {
+    root := ParseInput(lines)
+    ComputeSize(root)
+
+    totalSize := 70000000
+    requiredFree := 30000000
+    totalUsed := root.size
+
+    minAmountToFree := totalUsed - (totalSize - requiredFree)
+
+    return FindSmallestCandidate(root, minAmountToFree, root.size)
 }
 
 func SumSmallDirs(dir *Directory) int {
@@ -41,6 +55,18 @@ func SumSmallDirs(dir *Directory) int {
         total += dir.size
     }
     return total
+}
+
+func FindSmallestCandidate(dir *Directory, minimum int, bestSoFar int) int {
+    if dir.size >= minimum && dir.size < bestSoFar {
+        bestSoFar = dir.size
+    }
+
+    for _, child := range dir.directories {
+        bestSoFar = FindSmallestCandidate(child, minimum, bestSoFar)
+    }
+
+    return bestSoFar
 }
 
 func ComputeSize(dir *Directory) int {

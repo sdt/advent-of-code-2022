@@ -15,27 +15,37 @@ func main() {
     lines := aoc.GetInputLines(filename)
 
     fmt.Println(part1(lines))
+    fmt.Println(part2(lines))
 }
 
 func part1(lines []string) int {
-    head := NewVec2(0, 0)
-    tail := NewVec2(0, 0)
+    return run(lines, 2)
+}
+
+func part2(lines []string) int {
+    return run(lines, 10)
+}
+
+func run(lines []string, knots int) int {
+    knot := make([]Vec2, knots)
 
     tailLog := make(map[Vec2]bool)
 
-    tailLog[tail] = true
+    tailLog[knot[knots-1]] = true
 
     for _, line := range lines {
         dir, dist := parseLine(line)
 
         for i := 0; i < dist; i++ {
-            head = head.Add(dir)
-            diff := head.Sub(tail)
-            move := diff.Sign()
-            if diff != move {
-                tail = tail.Add(move)
-                tailLog[tail] = true
+            knot[0] = knot[0].Add(dir)
+            for j := 0; j < knots - 1; j++ {
+                diff := knot[j].Sub(knot[j+1])
+                move := diff.Sign()
+                if diff != move {
+                    knot[j+1] = knot[j+1].Add(move)
+                }
             }
+            tailLog[knot[knots-1]] = true
         }
     }
     return len(tailLog)

@@ -9,11 +9,6 @@ type Vec2 struct {
     x, y int
 }
 
-type Grid[T any] struct {
-    size Vec2
-    cell []T
-}
-
 type Queue[T any] struct {
     queue []T
 }
@@ -32,8 +27,8 @@ func main() {
 
 func part1(lines []string) int {
     // Leave a border around the edge as sentinel values
-    grid := NewGrid[int](len(lines[0]) + 2, len(lines) + 2, 100)
-    seen := NewGrid[bool](grid.size.x, grid.size.y, false)
+    grid := aoc.NewGrid[int](len(lines[0]) + 2, len(lines) + 2, 100)
+    seen := aoc.NewGrid[bool](grid.Width(), grid.Height(), false)
 
     var end Vec2
 
@@ -47,13 +42,13 @@ func part1(lines []string) int {
             if char == 'S' {
                 char = 'a'
                 agenda.Enqueue(NewSolution(pos, 0))
-                seen.Set(pos, true)
+                seen.Set(pos.x, pos.y, true)
             } else if char == 'E' {
                 char = 'z'
                 end = pos
             }
 
-            grid.Set(pos, int(char - 'a'))
+            grid.Set(pos.x, pos.y, int(char - 'a'))
         }
     }
 
@@ -64,17 +59,17 @@ func part1(lines []string) int {
         }
 
 
-        from := grid.Get(attempt.pos)
+        from := grid.Get(attempt.pos.x, attempt.pos.y)
         for _, direction := range directions {
             next := attempt.pos.Add(direction)
-            if seen.Get(next) {
+            if seen.Get(next.x, next.y) {
                 continue;
             }
-            to := grid.Get(next)
+            to := grid.Get(next.x, next.y)
 
             if to - from <= 1 {
                 agenda.Enqueue(NewSolution(next, attempt.distance+1))
-                seen.Set(next, true)
+                seen.Set(next.x, next.y, true)
             }
         }
     }
@@ -84,8 +79,8 @@ func part1(lines []string) int {
 
 func part2(lines []string) int {
     // Leave a border around the edge as sentinel values
-    grid := NewGrid[int](len(lines[0]) + 2, len(lines) + 2, -100)
-    seen := NewGrid[bool](grid.size.x, grid.size.y, false)
+    grid := aoc.NewGrid[int](len(lines[0]) + 2, len(lines) + 2, -100)
+    seen := aoc.NewGrid[bool](grid.Width(), grid.Height(), false)
 
     agenda := NewQueue[Solution]()
 
@@ -99,61 +94,35 @@ func part2(lines []string) int {
             } else if char == 'E' {
                 char = 'z'
                 agenda.Enqueue(NewSolution(pos, 0))
-                seen.Set(pos, true)
+                seen.Set(pos.x, pos.y, true)
             }
 
-            grid.Set(pos, int(char - 'a'))
+            grid.Set(pos.x, pos.y, int(char - 'a'))
         }
     }
 
     for !agenda.IsEmpty() {
         attempt := agenda.Dequeue()
 
-        from := grid.Get(attempt.pos)
+        from := grid.Get(attempt.pos.x, attempt.pos.y)
         if from == 0 {
             return attempt.distance
         }
 
         for _, direction := range directions {
             next := attempt.pos.Add(direction)
-            if seen.Get(next) {
+            if seen.Get(next.x, next.y) {
                 continue;
             }
-            to := grid.Get(next)
+            to := grid.Get(next.x, next.y)
 
             if from - to <= 1 {
                 agenda.Enqueue(NewSolution(next, attempt.distance+1))
-                seen.Set(next, true)
+                seen.Set(next.x, next.y, true)
             }
         }
     }
     return -1
-}
-
-func NewGrid[T any](w, h int, defaultValue T) *Grid[T] {
-    grid := Grid[T]{
-        size: Vec2{w, h},
-        cell: make([]T, w * h),
-    }
-
-    for i := range grid.cell {
-        grid.cell[i] = defaultValue
-    }
-
-    return &grid
-}
-
-func (this *Grid[T]) Set(pos Vec2, value T) *Grid[T] {
-    this.cell[this.offset(pos)] = value
-    return this
-}
-
-func (this *Grid[T]) Get(pos Vec2) T {
-    return this.cell[this.offset(pos)]
-}
-
-func (this Grid[T]) offset(pos Vec2) int {
-    return this.size.x * pos.y + pos.x
 }
 
 func NewQueue[T any]() *Queue[T] {

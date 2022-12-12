@@ -27,6 +27,7 @@ func main() {
     filename := aoc.GetFilename()
     lines := aoc.GetInputLines(filename)
     fmt.Println(part1(lines))
+    fmt.Println(part2(lines))
 }
 
 func part1(lines []string) int {
@@ -39,8 +40,6 @@ func part1(lines []string) int {
     agenda := NewQueue[Solution]()
 
     directions := []Vec2{ Vec2{ 1, 0 }, Vec2{ 0, 1 }, Vec2{ -1, 0 }, Vec2{ 0, -1 } }
-        //fmt.Println(directions)
-
     for y, line := range lines {
         for x, char := range line {
             pos := Vec2{ x + 1, y + 1 }
@@ -59,9 +58,7 @@ func part1(lines []string) int {
     }
 
     for !agenda.IsEmpty() {
-        //fmt.Println(agenda)
         attempt := agenda.Dequeue()
-        //fmt.Println(attempt)
         if attempt.pos == end {
             return attempt.distance
         }
@@ -82,7 +79,55 @@ func part1(lines []string) int {
         }
     }
 
-    return len(lines)
+    return -1
+}
+
+func part2(lines []string) int {
+    // Leave a border around the edge as sentinel values
+    grid := NewGrid[int](len(lines[0]) + 2, len(lines) + 2, -100)
+    seen := NewGrid[bool](grid.size.x, grid.size.y, false)
+
+    agenda := NewQueue[Solution]()
+
+    directions := []Vec2{ Vec2{ 1, 0 }, Vec2{ 0, 1 }, Vec2{ -1, 0 }, Vec2{ 0, -1 } }
+    for y, line := range lines {
+        for x, char := range line {
+            pos := Vec2{ x + 1, y + 1 }
+
+            if char == 'S' {
+                char = 'a'
+            } else if char == 'E' {
+                char = 'z'
+                agenda.Enqueue(NewSolution(pos, 0))
+                seen.Set(pos, true)
+            }
+
+            grid.Set(pos, int(char - 'a'))
+        }
+    }
+
+    for !agenda.IsEmpty() {
+        attempt := agenda.Dequeue()
+
+        from := grid.Get(attempt.pos)
+        if from == 0 {
+            return attempt.distance
+        }
+
+        for _, direction := range directions {
+            next := attempt.pos.Add(direction)
+            if seen.Get(next) {
+                continue;
+            }
+            to := grid.Get(next)
+
+            if from - to <= 1 {
+                agenda.Enqueue(NewSolution(next, attempt.distance+1))
+                seen.Set(next, true)
+            }
+        }
+    }
+    return -1
 }
 
 func NewGrid[T any](w, h int, defaultValue T) *Grid[T] {

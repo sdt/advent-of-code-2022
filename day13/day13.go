@@ -30,8 +30,6 @@ type Entry struct {
     packet  *PacketValue
 }
 
-type Entries []Entry
-
 func main() {
 	filename := aoc.GetFilename()
 	lines := aoc.GetInputLines(filename)
@@ -66,14 +64,16 @@ func part2(lines []string) int {
     second := "[[6]]"
     lines = append(lines, first, second)
 
-    var entries Entries
+    var entries []Entry
     for _, line := range lines {
         if len(line) == 0 {
             continue
         }
         entries = append(entries, Entry{ line, parseLine(line) })
     }
-    sort.Sort(entries)
+    sort.Slice(entries, func (i, j int) bool {
+        return compare(*entries[i].packet, *entries[j].packet) == RightOrder
+    })
 
     ret := 1
     for i, entry := range entries {
@@ -199,16 +199,4 @@ func compare(left PacketValue, right PacketValue) Comparison {
     }
 
     return compare(left.MakeListValue(), right.MakeListValue())
-}
-
-func (this Entries) Len() int {
-    return len(this)
-}
-
-func (this Entries) Less(i, j int) bool {
-    return compare(*this[i].packet, *this[j].packet) == RightOrder
-}
-
-func (this Entries) Swap(i, j int) {
-    this[i], this[j] = this[j], this[i]
 }

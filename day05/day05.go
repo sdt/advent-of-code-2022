@@ -3,14 +3,14 @@ package main
 import (
 	"advent-of-code/aoc"
 	"fmt"
-    "strings"
+	"strings"
 )
 
 type Crate rune
 type Stack []Crate
 
 type Move struct {
-    from, to, howMany int
+	from, to, howMany int
 }
 
 const debug = !true
@@ -24,134 +24,134 @@ func main() {
 }
 
 func part1(input string) string {
-    stacks, moves := parseInput(input)
+	stacks, moves := parseInput(input)
 
-    printStacks(stacks)
+	printStacks(stacks)
 
-    for _, move := range moves {
-        stacks = applyMove9000(stacks, move)
-        printStacks(stacks)
-    }
+	for _, move := range moves {
+		stacks = applyMove9000(stacks, move)
+		printStacks(stacks)
+	}
 
-    ret := ""
-    for _, stack := range stacks {
-        ret = fmt.Sprintf("%s%c", ret, stack[len(stack)-1])
-    }
-    return ret
+	ret := ""
+	for _, stack := range stacks {
+		ret = fmt.Sprintf("%s%c", ret, stack[len(stack)-1])
+	}
+	return ret
 }
 
 func part2(input string) string {
-    stacks, moves := parseInput(input)
+	stacks, moves := parseInput(input)
 
-    printStacks(stacks)
+	printStacks(stacks)
 
-    for _, move := range moves {
-        stacks = applyMove9001(stacks, move)
-        printStacks(stacks)
-    }
+	for _, move := range moves {
+		stacks = applyMove9001(stacks, move)
+		printStacks(stacks)
+	}
 
-    ret := ""
-    for _, stack := range stacks {
-        ret = fmt.Sprintf("%s%c", ret, stack[len(stack)-1])
-    }
-    return ret
+	ret := ""
+	for _, stack := range stacks {
+		ret = fmt.Sprintf("%s%c", ret, stack[len(stack)-1])
+	}
+	return ret
 }
 
 func applyMove9000(stacks []Stack, move Move) []Stack {
-    if debug {
-        fmt.Printf("Move %d from %d to %d\n", move.howMany, move.from, move.to);
-    }
-    from := stacks[move.from - 1]
-    to   := stacks[move.to - 1]
+	if debug {
+		fmt.Printf("Move %d from %d to %d\n", move.howMany, move.from, move.to)
+	}
+	from := stacks[move.from-1]
+	to := stacks[move.to-1]
 
-    for i := 0; i < move.howMany; i++ {
-        to = append(to, from[len(from) - i - 1])
-    }
+	for i := 0; i < move.howMany; i++ {
+		to = append(to, from[len(from)-i-1])
+	}
 
-    stacks[move.to - 1] = to
-    stacks[move.from - 1] = from[0:len(from) - move.howMany]
+	stacks[move.to-1] = to
+	stacks[move.from-1] = from[0 : len(from)-move.howMany]
 
-    return stacks
+	return stacks
 }
 
 func applyMove9001(stacks []Stack, move Move) []Stack {
-    if debug {
-        fmt.Printf("Move %d from %d to %d\n", move.howMany, move.from, move.to);
-    }
-    from := stacks[move.from - 1]
-    to   := stacks[move.to - 1]
+	if debug {
+		fmt.Printf("Move %d from %d to %d\n", move.howMany, move.from, move.to)
+	}
+	from := stacks[move.from-1]
+	to := stacks[move.to-1]
 
-    for i := 0; i < move.howMany; i++ {
-        to = append(to, from[len(from) - move.howMany + i])
-    }
+	for i := 0; i < move.howMany; i++ {
+		to = append(to, from[len(from)-move.howMany+i])
+	}
 
-    stacks[move.to - 1] = to
-    stacks[move.from - 1] = from[0:len(from) - move.howMany]
+	stacks[move.to-1] = to
+	stacks[move.from-1] = from[0 : len(from)-move.howMany]
 
-    return stacks
+	return stacks
 }
 
 func parseInput(input string) ([]Stack, []Move) {
-    parts := strings.Split(input, "\n\n")
+	parts := strings.Split(input, "\n\n")
 
-    return parseStacks(parts[0]), parseMoves(parts[1])
+	return parseStacks(parts[0]), parseMoves(parts[1])
 }
 
 func parseStacks(input string) []Stack {
-    lines := strings.Split(input, "\n")
+	lines := strings.Split(input, "\n")
 
-    counts := lines[len(lines)-1]
-    count := (len(counts) + 2) / 4
+	counts := lines[len(lines)-1]
+	count := (len(counts) + 2) / 4
 
-    stacks := make([]Stack, count)
+	stacks := make([]Stack, count)
 
-    for i := len(lines) - 2; i >= 0; i-- {
-        line := lines[i]
-        j := 1
-        for s, _ := range stacks {
-            if line[j] != ' ' {
-                stacks[s] = append(stacks[s], Crate(line[j]))
-            }
-            j += 4
-        }
-    }
+	for i := len(lines) - 2; i >= 0; i-- {
+		line := lines[i]
+		j := 1
+		for s, _ := range stacks {
+			if line[j] != ' ' {
+				stacks[s] = append(stacks[s], Crate(line[j]))
+			}
+			j += 4
+		}
+	}
 
-    return stacks
+	return stacks
 }
 
 func printStacks(stacks []Stack) {
-    if !debug {
-        return
-    }
+	if !debug {
+		return
+	}
 
-    for i, stack := range stacks {
-        fmt.Printf("[%d]", i+1);
-        for _, crate := range stack {
-            fmt.Printf(" %c", crate);
-        }
-        fmt.Println("");
-    }
-    fmt.Println();
+	for i, stack := range stacks {
+		fmt.Printf("[%d]", i+1)
+		for _, crate := range stack {
+			fmt.Printf(" %c", crate)
+		}
+		fmt.Println("")
+	}
+	fmt.Println()
 }
 
 func parseMoves(input string) []Move {
-    moves := make([]Move, 0)
+	moves := make([]Move, 0)
 
-    lines := strings.Split(input, "\n");
-    for _, line := range lines {
-        if line != "" {
-            moves = append(moves, parseMove(line))
-        }
-    }
+	lines := strings.Split(input, "\n")
+	for _, line := range lines {
+		if line != "" {
+			moves = append(moves, parseMove(line))
+		}
+	}
 
-    return moves
+	return moves
 }
 
 func parseMove(line string) Move {
-    words := strings.Split(line, " ");
-    return Move{
-        howMany: aoc.ParseInt(words[1]),
-        from:    aoc.ParseInt(words[3]),
-        to:     aoc.ParseInt(words[5]),
-    }
+	words := strings.Split(line, " ")
+	return Move{
+		howMany: aoc.ParseInt(words[1]),
+		from:    aoc.ParseInt(words[3]),
+		to:      aoc.ParseInt(words[5]),
+	}
 }

@@ -1,136 +1,136 @@
 package main
 
 import (
-    "advent-of-code/aoc"
-    "fmt"
-    "strings"
+	"advent-of-code/aoc"
+	"fmt"
+	"strings"
 )
 
 type File struct {
-    name string
-    size int
+	name string
+	size int
 }
 
 type Directory struct {
-    name string
-    files []File
-    directories map[string]*Directory
-    parent *Directory
-    size int
+	name        string
+	files       []File
+	directories map[string]*Directory
+	parent      *Directory
+	size        int
 }
 
 func main() {
-    filename := aoc.GetFilename()
-    lines := aoc.GetInputLines(filename)
+	filename := aoc.GetFilename()
+	lines := aoc.GetInputLines(filename)
 
-    fmt.Println(part1(lines))
-    fmt.Println(part2(lines))
+	fmt.Println(part1(lines))
+	fmt.Println(part2(lines))
 }
 
 func part1(lines []string) int {
-    root := ParseInput(lines)
-    ComputeSize(root)
-    return SumSmallDirs(root)
+	root := ParseInput(lines)
+	ComputeSize(root)
+	return SumSmallDirs(root)
 }
 
 func part2(lines []string) int {
-    root := ParseInput(lines)
-    ComputeSize(root)
+	root := ParseInput(lines)
+	ComputeSize(root)
 
-    totalSize := 70000000
-    requiredFree := 30000000
-    totalUsed := root.size
+	totalSize := 70000000
+	requiredFree := 30000000
+	totalUsed := root.size
 
-    minAmountToFree := totalUsed - (totalSize - requiredFree)
+	minAmountToFree := totalUsed - (totalSize - requiredFree)
 
-    return FindSmallestCandidate(root, minAmountToFree, root.size)
+	return FindSmallestCandidate(root, minAmountToFree, root.size)
 }
 
 func SumSmallDirs(dir *Directory) int {
-    total := 0
-    for _, child := range dir.directories {
-        total += SumSmallDirs(child)
-    }
-    if dir.size <= 100000 {
-        total += dir.size
-    }
-    return total
+	total := 0
+	for _, child := range dir.directories {
+		total += SumSmallDirs(child)
+	}
+	if dir.size <= 100000 {
+		total += dir.size
+	}
+	return total
 }
 
 func FindSmallestCandidate(dir *Directory, minimum int, bestSoFar int) int {
-    if dir.size >= minimum && dir.size < bestSoFar {
-        bestSoFar = dir.size
-    }
+	if dir.size >= minimum && dir.size < bestSoFar {
+		bestSoFar = dir.size
+	}
 
-    for _, child := range dir.directories {
-        bestSoFar = FindSmallestCandidate(child, minimum, bestSoFar)
-    }
+	for _, child := range dir.directories {
+		bestSoFar = FindSmallestCandidate(child, minimum, bestSoFar)
+	}
 
-    return bestSoFar
+	return bestSoFar
 }
 
 func ComputeSize(dir *Directory) int {
-    for _, file := range dir.files {
-        dir.size += file.size
-    }
-    for _, child := range dir.directories {
-        dir.size += ComputeSize(child)
-    }
-    return dir.size
+	for _, file := range dir.files {
+		dir.size += file.size
+	}
+	for _, child := range dir.directories {
+		dir.size += ComputeSize(child)
+	}
+	return dir.size
 }
 
-func ParseInput(lines[] string) *Directory {
-    cwd := NewDirectory("/", nil)
+func ParseInput(lines []string) *Directory {
+	cwd := NewDirectory("/", nil)
 
-    for _, line := range lines {
-        cwd = ParseLine(cwd, line)
-    }
+	for _, line := range lines {
+		cwd = ParseLine(cwd, line)
+	}
 
-    // Walk back up to the root directory
-    for cwd.parent != nil {
-        cwd = cwd.parent
-    }
-    return cwd
+	// Walk back up to the root directory
+	for cwd.parent != nil {
+		cwd = cwd.parent
+	}
+	return cwd
 }
 
 func ParseLine(cwd *Directory, line string) *Directory {
-    if line == "$ ls" || line == "$ cd /" {
-        return cwd
-    }
+	if line == "$ ls" || line == "$ cd /" {
+		return cwd
+	}
 
-    if line == "$ cd .." {
-        return cwd.parent
-    }
+	if line == "$ cd .." {
+		return cwd.parent
+	}
 
-    if strings.HasPrefix(line, "$ cd ") {
-        start := len("$ cd ")
-        name := line[start:]
-        child := cwd.directories[name]
-        return child
-    }
+	if strings.HasPrefix(line, "$ cd ") {
+		start := len("$ cd ")
+		name := line[start:]
+		child := cwd.directories[name]
+		return child
+	}
 
-    if strings.HasPrefix(line, "dir ") {
-        start := len("dir ")
-        name := line[start:]
-        cwd.directories[name] = NewDirectory(name, cwd)
-        return cwd
-    }
+	if strings.HasPrefix(line, "dir ") {
+		start := len("dir ")
+		name := line[start:]
+		cwd.directories[name] = NewDirectory(name, cwd)
+		return cwd
+	}
 
-    // File
-    words := strings.Split(line, " ")
-    cwd.files = append(cwd.files, NewFile(words[1], aoc.ParseInt(words[0])))
+	// File
+	words := strings.Split(line, " ")
+	cwd.files = append(cwd.files, NewFile(words[1], aoc.ParseInt(words[0])))
 
-    return cwd
+	return cwd
 }
 
 func NewDirectory(name string, parent *Directory) *Directory {
-    return &Directory{
-        name: name,
-        parent: parent,
-        directories: make(map[string]*Directory),
-    }
+	return &Directory{
+		name:        name,
+		parent:      parent,
+		directories: make(map[string]*Directory),
+	}
 }
 
 func NewFile(name string, size int) File {
-    return File{ name: name, size: size }
+	return File{name: name, size: size}
 }

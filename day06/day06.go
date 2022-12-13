@@ -14,36 +14,36 @@ func main() {
 }
 
 func part1(input string) int {
-    return findMarker(input, 4)
+	return findMarker(input, 4)
 }
 
 func part2(input string) int {
-    return findMarker(input, 14)
+	return findMarker(input, 14)
 }
 
 func findMarker(input string, markerLen int) int {
-    lastPos := len(input) - markerLen + 1
+	lastPos := len(input) - markerLen + 1
 
-    for i := 0; i < lastPos; i++ {
-        candidate := input[i:i+markerLen]
-        if isMarker(candidate) {
-            return i + markerLen
-        }
-    }
+	for i := 0; i < lastPos; i++ {
+		candidate := input[i : i+markerLen]
+		if isMarker(candidate) {
+			return i + markerLen
+		}
+	}
 
-    return 0
+	return 0
 }
 
 func isMarker(candidate string) bool {
-    mask := uint32(0)
+	mask := uint32(0)
 
-    for _, char := range candidate {
-        bit := uint32(1) << (char - 'a')
+	for _, char := range candidate {
+		bit := uint32(1) << (char - 'a')
 
-        if mask | bit == mask {
-            return false
-        }
-        mask |= bit
-    }
-    return true
+		if mask|bit == mask {
+			return false
+		}
+		mask |= bit
+	}
+	return true
 }

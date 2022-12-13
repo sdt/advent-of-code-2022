@@ -3,6 +3,7 @@ package main
 import (
 	"advent-of-code/aoc"
 	"fmt"
+    "sort"
 )
 
 type ValueType int
@@ -24,10 +25,18 @@ type PacketValue struct {
     listValue   []*PacketValue
 }
 
+type Entry struct {
+    line    string
+    packet  *PacketValue
+}
+
+type Entries []Entry
+
 func main() {
 	filename := aoc.GetFilename()
 	lines := aoc.GetInputLines(filename)
 	fmt.Println(part1(lines))
+	fmt.Println(part2(lines))
 }
 
 func part1(lines []string) int {
@@ -50,6 +59,30 @@ func part1(lines []string) int {
         pair++
     }
 	return result
+}
+
+func part2(lines []string) int {
+    first := "[[2]]"
+    second := "[[6]]"
+    lines = append(lines, first, second)
+
+    var entries Entries
+    for _, line := range lines {
+        if len(line) == 0 {
+            continue
+        }
+        entries = append(entries, Entry{ line, parseLine(line) })
+    }
+    sort.Sort(entries)
+
+    ret := 1
+    for i, entry := range entries {
+        if entry.line == first || entry.line == second {
+            ret = ret * (i + 1)
+        }
+    }
+
+    return ret
 }
 
 func parseLine(line string) *PacketValue {
@@ -166,4 +199,16 @@ func compare(left PacketValue, right PacketValue) Comparison {
     }
 
     return compare(left.MakeListValue(), right.MakeListValue())
+}
+
+func (this Entries) Len() int {
+    return len(this)
+}
+
+func (this Entries) Less(i, j int) bool {
+    return compare(*this[i].packet, *this[j].packet) == RightOrder
+}
+
+func (this Entries) Swap(i, j int) {
+    this[i], this[j] = this[j], this[i]
 }

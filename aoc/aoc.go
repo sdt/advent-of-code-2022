@@ -47,3 +47,10 @@ func CheckErr(err error) {
 		log.Fatal(err)
 	}
 }
+
+func Slurp(filename string) string {
+	b, err := os.ReadFile(filename)
+	CheckErr(err)
+
+	return string(b)
+}

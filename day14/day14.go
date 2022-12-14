@@ -11,6 +11,7 @@ func main() {
 	lines := aoc.GetInputLines(filename);
 
 	fmt.Println(part1(lines));
+	fmt.Println(part2(lines));
 }
 
 type Material rune
@@ -42,11 +43,38 @@ func part1(lines []string) int {
 	return sands
 }
 
+func part2(lines []string) int {
+	cave := parseCave(lines)
+
+	start := Vec2{ 500, 0 }
+
+	// Fill out the floor. The sand can only slope at 45 degrees, so the
+	// floor only needs to be twice as wide as the height.
+	floor := cave.MaxY() + 2
+	width := floor - start.y
+	for x := start.x - width; x <= start.x + width; x++ {
+		cave.Set(x, floor, Rock)
+	}
+
+	cave.Set(start.x, start.y, Source)
+	//cave.Print("%c", 0)
+	sands := 0  // booyakasha
+	for emitSand(cave, start) {
+		sands++
+		//cave.Print("%c", 0)
+	}
+	//cave.Print("%c", 0)
+	return sands
+}
+
 func emitSand(cave *aoc.InfiniteGrid[Material], start Vec2) bool {
 	pos := start
 	for cave.OnGrid(pos.x, pos.y) {
 		nextPos := moveSand(*cave, pos)
 		if nextPos == pos {
+			if cave.Get(pos.x, pos.y) == Sand {
+				return false
+			}
 			cave.Set(pos.x, pos.y, Sand)
 			return true
 		}

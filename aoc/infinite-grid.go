@@ -56,6 +56,10 @@ func (this InfiniteGrid[T]) Print(format string, border int) {
 	fmt.Println()
 }
 
+func (this InfiniteGrid[T]) MaxY() int {
+	return this.max.y
+}
+
 func NewInfiniteGrid[T any](defaultValue T) *InfiniteGrid[T] {
 	return &InfiniteGrid[T]{
 		defaultValue: defaultValue,

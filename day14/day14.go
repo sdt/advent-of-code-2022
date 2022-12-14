@@ -46,24 +46,27 @@ func part1(lines []string) int {
 func part2(lines []string) int {
 	cave := parseCave(lines)
 
-	start := Vec2{ 500, 0 }
-
-	// Fill out the floor. The sand can only slope at 45 degrees, so the
-	// floor only needs to be twice as wide as the height.
-	floor := cave.MaxY() + 2
-	width := floor - start.y
-	for x := start.x - width; x <= start.x + width; x++ {
-		cave.Set(x, floor, Rock)
-	}
-
-	cave.Set(start.x, start.y, Source)
-	//cave.Print("%c", 0)
 	sands := 0  // booyakasha
-	for emitSand(cave, start) {
-		sands++
-		//cave.Print("%c", 0)
+
+	start := Vec2{ 500, 0 }
+	cave.Set(start.x, start.y, Sand)
+	sands++
+
+	endY := cave.MaxY() + 2
+
+	for y := 1; y < endY; y++ {
+		for dx := -y; dx <= y; dx++ {
+			x := dx + start.x
+			if cave.Get(x, y) == Air && (
+				cave.Get(x-1, y-1) == Sand ||
+				cave.Get(x,   y-1) == Sand ||
+				cave.Get(x+1, y-1) == Sand) {
+				sands++
+				cave.Set(x, y, Sand)
+			}
+		}
 	}
-	//cave.Print("%c", 0)
+
 	return sands
 }
 

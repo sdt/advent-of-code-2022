@@ -5,7 +5,7 @@ clean:
 	for i in day* ; do ( cd $$i; echo "--> $$i"; go clean ); done
 
 fmt:
-	for i in day* ; do ( cd $$i; echo "--> $$i"; go fmt ); done
+	for i in day* ; do ( cd $$i; echo "--> $$i"; gofmt -l -s -w *.go ); done
 
 vet:
 	for i in day* ; do ( cd $$i; echo "--> $$i"; go vet ); done

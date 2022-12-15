@@ -68,7 +68,7 @@ func part2(lines []string) int {
 		segments := GetSegments(pairs, y)
 		if len(segments) > 1 {
 			x := segments[1].start - 1
-			return y + x * 4_000_000
+			return y + x*4_000_000
 		}
 	}
 

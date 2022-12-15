@@ -108,7 +108,7 @@ func parseStacks(input string) []Stack {
 	for i := len(lines) - 2; i >= 0; i-- {
 		line := lines[i]
 		j := 1
-		for s, _ := range stacks {
+		for s := range stacks {
 			if line[j] != ' ' {
 				stacks[s] = append(stacks[s], Crate(line[j]))
 			}

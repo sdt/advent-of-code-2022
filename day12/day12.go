@@ -34,7 +34,7 @@ func part1(lines []string) int {
 
 	agenda := NewQueue[Solution]()
 
-	directions := []Vec2{Vec2{1, 0}, Vec2{0, 1}, Vec2{-1, 0}, Vec2{0, -1}}
+	directions := []Vec2{{1, 0}, {0, 1}, {-1, 0}, {0, -1}}
 	for y, line := range lines {
 		for x, char := range line {
 			pos := Vec2{x + 1, y + 1}
@@ -83,7 +83,7 @@ func part2(lines []string) int {
 
 	agenda := NewQueue[Solution]()
 
-	directions := []Vec2{Vec2{1, 0}, Vec2{0, 1}, Vec2{-1, 0}, Vec2{0, -1}}
+	directions := []Vec2{{1, 0}, {0, 1}, {-1, 0}, {0, -1}}
 	for y, line := range lines {
 		for x, char := range line {
 			pos := Vec2{x + 1, y + 1}

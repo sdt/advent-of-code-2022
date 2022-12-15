@@ -58,16 +58,17 @@ func part2(lines []string) int {
 
 	for i, line := range lines {
 		pairs[i] = parsePair(line)
+		//fmt.Println(line, pairs[i])
 	}
 
 	//maxY := 20
-	maxY := 4000000
+	maxY := 4_000_000
 
-	for y := 0; y <= maxY; y++ {
+	for y := maxY; y >= 0; y-- {
 		segments := GetSegments(pairs, y)
 		if len(segments) > 1 {
 			x := segments[1].start - 1
-			return y + x * 4000000
+			return y + x * 4_000_000
 		}
 	}
 

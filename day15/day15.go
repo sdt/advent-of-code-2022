@@ -11,6 +11,7 @@ func main() {
 	lines := aoc.GetInputLines(filename)
 
 	fmt.Println(part1(lines))
+	fmt.Println(part2(lines))
 }
 
 type Vec2 struct {
@@ -33,18 +34,14 @@ func part1(lines []string) int {
 		pairs[i] = parsePair(line)
 	}
 
-	// line := 10
-	line := 2000000
+	line := 10
+	//line := 2000000
 
-	segments := []Segment{}
+	segments := GetSegments(pairs, line)
 	beacons := make(map[int]bool)
 	for _, pair := range pairs {
-		segment := pair.GetSegment(line)
-		if segment.length > 0 {
-			segments = segment.Insert(segments)
-			if pair.beacon.y == line {
-				beacons[pair.beacon.x] = true
-			}
+		if pair.beacon.y == line {
+			beacons[pair.beacon.x] = true
 		}
 	}
 
@@ -54,6 +51,38 @@ func part1(lines []string) int {
 	}
 
 	return total
+}
+
+func part2(lines []string) int {
+	pairs := make([]*Pair, len(lines))
+
+	for i, line := range lines {
+		pairs[i] = parsePair(line)
+	}
+
+	//maxY := 20
+	maxY := 4000000
+
+	for y := 0; y <= maxY; y++ {
+		segments := GetSegments(pairs, y)
+		if len(segments) > 1 {
+			x := segments[1].start - 1
+			return y + x * 4000000
+		}
+	}
+
+	return 0
+}
+
+func GetSegments(pairs []*Pair, line int) []Segment {
+	segments := []Segment{}
+	for _, pair := range pairs {
+		segment := pair.GetSegment(line)
+		if segment.length > 0 {
+			segments = segment.Insert(segments)
+		}
+	}
+	return segments
 }
 
 func (this *Pair) GetSegment(y int) Segment {
@@ -150,7 +179,6 @@ var InputRegex = regexp.MustCompile("Sensor at x=(-?\\d+), y=(-?\\d+): closest b
 
 func parsePair(line string) *Pair {
 	matches := InputRegex.FindStringSubmatch(line)
-	fmt.Println(line, matches)
 	nums := aoc.ParseInts(matches[1:])
 
 	sensor := Vec2{nums[0], nums[1]}

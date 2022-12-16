@@ -1,62 +1,69 @@
 package main
 
 import (
-    //"advent-of-code/it2"
-    "advent-of-code/stream"
-    "fmt"
+	//"advent-of-code/it2"
+	"advent-of-code/stream"
+	"fmt"
 )
 
 func main() {
-    s := stream.FromSlice([]int{ 1, 2, 3, 4, 5 })
-    t := stream.Map(s, func(x int) int { return 3 * x })
-    u := stream.Filter(t, func(x int) bool { return x & 1 == 1 })
-    v := stream.Concat([]*stream.Stream[int]{ s, t, nil, s })
+	s := stream.FromSlice([]int{1, 2, 3, 4, 5})
+	t := stream.Map(s, func(x int) int { return 3 * x })
+	u := stream.Filter(t, func(x int) bool { return x&1 == 1 })
+	v := stream.Concat([]*stream.Stream[int]{s, t, nil, s})
 
-    printStream(s)
-    printStream(t)
-    printStream(u)
-    printStream(v)
+	printStream(s)
+	printStream(t)
+	printStream(u)
+	printStream(v)
 
-    printStream(stream.FlatMap(s, func (x int) []int {
-        if x & 1 == 1 {
-            return []int{ x }
-        }
-        return []int{ }
-    }))
+	printStream(stream.FlatMap(s, func(x int) []int {
+		if x&1 == 1 {
+			return []int{x}
+		}
+		return []int{}
+	}))
 
-    printStream(stream.FlatMap(s, func (x int) []int {
-        return []int{ x * 2 }
-    }))
+	printStream(stream.FlatMap(s, func(x int) []int {
+		return []int{x * 2}
+	}))
 
-    xx := stream.FlatMap(s, func (x int) []int {
-        if x & 1 == 1 {
-            return []int{ }
-        }
-        ret := make([]int, x)
-        for i := 0; i < x; i++ {
-            ret[i] = x
-        }
-        return ret
-    })
-    printStream(xx)
-    printStream(stream.Concat([]*stream.Stream[int]{ xx, xx }))
-    printStream(stream.Take(stream.Append(xx, xx), 3))
+	xx := stream.FlatMap(s, func(x int) []int {
+		if x&1 == 1 {
+			return []int{}
+		}
+		ret := make([]int, x)
+		for i := 0; i < x; i++ {
+			ret[i] = x
+		}
+		return ret
+	})
+	printStream(xx)
+	printStream(stream.Concat([]*stream.Stream[int]{xx, xx}))
+	printStream(stream.Take(stream.Append(xx, xx), 3))
 
-    var integers *stream.Stream[int]
-    integers = stream.NewStreamP[int](
-        1,
-        func() *stream.Stream[int] { return stream.Map(integers, func(x int) int { return x + 1 }) },
-    )
+	var integers *stream.Stream[int]
+	integers = stream.Cons[int](
+		1,
+		func() *stream.Stream[int] { return stream.Map(integers, func(x int) int { return x + 1 }) },
+	)
 
-    printStream(stream.Take(integers, 10))
+	ten := stream.Take(integers, 10)
+	printStream(ten)
+	printStream(ten)
+
+	primes := stream.Sieve(integers.Next())
+	printStream(stream.Zip(primes, primes, func(a, b int) int {
+		return a + b
+	}))
 }
 
 func printStream[T any](s *stream.Stream[T]) {
-    for s != nil {
-        fmt.Println(s.Value())
-        s = s.Next()
-    }
-    fmt.Println()
+	for s != nil {
+		fmt.Println(s.Value())
+		s = s.Next()
+	}
+	fmt.Println()
 }
 
 /*

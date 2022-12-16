@@ -24,13 +24,7 @@ type State struct {
 	pressure int
 }
 
-type Set[T comparable] struct {
-	element map[T]bool
-}
-
-type StateQueue struct {
-	queue []*State
-}
+type StateSet map[string]*State
 
 func main() {
 	filename := aoc.GetFilename()
@@ -42,60 +36,49 @@ func main() {
 func part1(lines []string) int {
 	aa := parseInput(lines)
 
+	current := make(StateSet)
+
+	AddState(current, NewState(aa))
+
 	endTime := 30
 
+	for time := 0; time < endTime-1; time++ {
+		next := make(StateSet)
+
+		for _, state := range current {
+			AddState(next, state.OpenValve())
+
+			for _, valve := range state.valve.leadsTo {
+				AddState(next, state.MoveTo(valve))
+			}
+		}
+
+		current = next
+	}
+
 	max := 0
-	agenda := []*State{ NewState(aa) }
-
-	best := make(map[string]int)
-
-	for len(agenda) > 0 {
-		state := agenda[0]
-		//fmt.Printf("%s time=%d pressure=%d\n", state.valve.name, state.time, state.pressure)
-		agenda = agenda[1:]
-
-		if bestPressure, found := best[state.Key()];
-				found && bestPressure > state.pressure {
-			// Already seen a better version of this state
-			continue
-		}
-
-		nextStates := make([]*State, 0, len(state.valve.leadsTo) + 1)
-
-		if nextState := state.OpenValve(); nextState != nil {
-			nextStates = append(nextStates, nextState)
-		}
-
-		for _, next := range state.valve.leadsTo {
-			nextState := state.MoveTo(next)
-			nextStates = append(nextStates, nextState)
-		}
-
-		if state.time + 1 == endTime {
-			for _, nextState := range nextStates {
-				if nextState.pressure > max {
-					max = nextState.pressure
-					//fmt.Println("New max:", max)
-				}
-			}
-		} else {
-			for _, nextState := range nextStates {
-				key := nextState.Key()
-				bestPressure, found := best[key]
-				if !found {
-					//fmt.Printf("Pressure %d at %s not seen before\n", nextState.pressure, key, nextState.openValves);
-				} else if bestPressure < nextState.pressure {
-					//fmt.Printf("Pressure %d at %s/%x up from %d\n", nextState.pressure, key, bestPressure);
-				} else {
-					continue
-				}
-				agenda = append(agenda, nextState)
-				best[key] = nextState.pressure
-			}
+	for _, state := range current {
+		finalPressure := state.pressure + state.rate
+		if finalPressure > max {
+			max = finalPressure
 		}
 	}
 
 	return max
+}
+
+func AddState(set StateSet, state* State) {
+	if state == nil {
+		return
+	}
+	key := state.Key()
+
+	if existing, found := set[key]; found {
+		if existing.pressure >= state.pressure {
+			return
+		}
+	}
+	set[key] = state
 }
 
 func parseInput(lines []string) *Valve {
@@ -149,8 +132,7 @@ func (this *State) OpenValve() *State {
 		return nil // already open
 	}
 
-	openValves := this.openValves
-	openValves |= this.valve.bit
+	openValves := this.openValves | this.valve.bit
 	time := this.time + 1
 	pressure := this.pressure + this.rate
 	rate := this.rate + this.valve.rate

@@ -54,7 +54,13 @@ func part1(lines []string) int {
 		//fmt.Printf("%s time=%d pressure=%d\n", state.valve.name, state.time, state.pressure)
 		agenda = agenda[1:]
 
-		nextStates := make([]*State, 0)
+		if bestPressure, found := best[state.Key()];
+				found && bestPressure > state.pressure {
+			// Already seen a better version of this state
+			continue
+		}
+
+		nextStates := make([]*State, 0, len(state.valve.leadsTo) + 1)
 
 		if nextState := state.OpenValve(); nextState != nil {
 			nextStates = append(nextStates, nextState)

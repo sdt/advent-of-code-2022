@@ -8,11 +8,6 @@ import (
 
 type ValueType int
 
-const (
-	IntValue ValueType = iota
-	ListValue
-)
-
 type Comparison int
 
 const (
@@ -22,9 +17,7 @@ const (
 )
 
 type PacketValue struct {
-	valueType ValueType
-	intValue  int
-	listValue []*PacketValue
+	value any // either an int, or an array of PacketValues
 }
 
 type Entry struct {
@@ -100,14 +93,12 @@ func parse(line string) (string, *PacketValue) {
 	if line[0] == '[' {
 		rest, listValue := parseListValue(line[1:])
 		return rest, &PacketValue{
-			valueType: ListValue,
-			listValue: listValue,
+			value: listValue,
 		}
 	}
 	rest, intValue := parseIntValue(line)
 	return rest, &PacketValue{
-		valueType: IntValue,
-		intValue:  intValue,
+		value: intValue,
 	}
 }
 
@@ -137,12 +128,12 @@ func parseIntValue(line string) (string, int) {
 }
 
 func (this PacketValue) String() string {
-	if this.valueType == IntValue {
-		return fmt.Sprintf("%d", this.intValue)
+	if value, ok := this.value.(int); ok {
+		return fmt.Sprintf("%d", value)
 	}
 
 	s := "["
-	for i, v := range this.listValue {
+	for i, v := range this.value.([]*PacketValue) {
 		if i != 0 {
 			s += ","
 		}
@@ -153,23 +144,23 @@ func (this PacketValue) String() string {
 }
 
 func (this PacketValue) MakeListValue() PacketValue {
-	if this.valueType == ListValue {
-		return this
+	if _, ok := this.value.(int); ok {
+		return PacketValue{[]*PacketValue{&this}}
 	}
 
-	return PacketValue{
-		valueType: ListValue,
-		listValue: []*PacketValue{&this},
-	}
+	return this
 }
 
 func compare(left PacketValue, right PacketValue) Comparison {
-	if left.valueType == IntValue && right.valueType == IntValue {
+	leftInt, leftIsInt := left.value.(int)
+	rightInt, rightIsInt := right.value.(int)
+
+	if leftIsInt && rightIsInt {
 		switch {
-		case left.intValue < right.intValue:
+		case leftInt < rightInt:
 			return RightOrder
 
-		case left.intValue > right.intValue:
+		case leftInt > rightInt:
 			return WrongOrder
 
 		default:
@@ -177,9 +168,9 @@ func compare(left PacketValue, right PacketValue) Comparison {
 		}
 	}
 
-	if left.valueType == ListValue && right.valueType == ListValue {
-		leftVal := left.listValue
-		rightVal := right.listValue
+	if !leftIsInt && !rightIsInt {
+		leftVal := left.value.([]*PacketValue)
+		rightVal := right.value.([]*PacketValue)
 
 		for {
 			if len(leftVal) == 0 {

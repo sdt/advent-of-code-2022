@@ -17,7 +17,7 @@ type Valve struct {
 }
 
 type State struct {
-	valve *Valve
+	valves []*Valve
 	openValves uint64
 	time int
 	rate int
@@ -26,34 +26,39 @@ type State struct {
 
 type StateSet map[string]*State
 
+var seen StateSet
+
 func main() {
 	filename := aoc.GetFilename()
 	lines := aoc.GetInputLines(filename)
-
-	fmt.Println(part1(lines))
-}
-
-func part1(lines []string) int {
 	aa := parseInput(lines)
 
+	fmt.Println(run(aa, 1, 30))
+	fmt.Println(run(aa, 2, 26))
+}
+
+func run(start *Valve, actors int, endTime int) int {
 	current := make(StateSet)
+	seen = make(StateSet)
 
-	AddState(current, NewState(aa))
-
-	endTime := 30
+	AddState(current, NewState(start, actors))
 
 	for time := 0; time < endTime-1; time++ {
-		next := make(StateSet)
-
 		for _, state := range current {
-			AddState(next, state.OpenValve())
-
-			for _, valve := range state.valve.leadsTo {
-				AddState(next, state.MoveTo(valve))
-			}
+			state.Tick()
 		}
 
-		current = next
+		for i := 0; i < actors; i++ {
+			next := make(StateSet)
+			for _, state := range current {
+				AddState(next, state.OpenValve(i))
+
+				for _, dest := range state.valves[i].leadsTo {
+					AddState(next, state.MoveTo(i, dest))
+				}
+			}
+			current = next
+		}
 	}
 
 	max := 0
@@ -73,12 +78,19 @@ func AddState(set StateSet, state* State) {
 	}
 	key := state.Key()
 
+	if existing, found := seen[key]; found {
+		if existing.pressure >= state.pressure {
+			return
+		}
+	}
+
 	if existing, found := set[key]; found {
 		if existing.pressure >= state.pressure {
 			return
 		}
 	}
 	set[key] = state
+	seen[key] = state
 }
 
 func parseInput(lines []string) *Valve {
@@ -111,35 +123,47 @@ func parseLine(line string) (string, int, []string) {
 	return name, rate, leadsTo
 }
 
-func NewState(valve *Valve) *State {
-	return &State{ valve, 0, 0, 0, 0 }
+func NewState(valve *Valve, actors int) *State {
+	valves := make([]*Valve, actors)
+	for i := 0; i < actors; i++ {
+		valves[i] = valve
+	}
+	return &State{ valves, 0, 0, 0, 0 }
 }
 
-func (this *State) MoveTo(next *Valve) *State {
-	openValves := this.openValves
-	time := this.time + 1
-	pressure := this.pressure + this.rate
-
-	return &State{ next, openValves, time, this.rate, pressure }
+func (this *State) Tick() {
+	this.time++
+	this.pressure += this.rate
 }
 
-func (this *State) OpenValve() *State {
-	if this.valve.rate == 0 {
-		return nil // no point opening a zero-flow valve
+func (this *State) MoveTo(index int, dest *Valve) *State {
+	valves := make([]*Valve, len(this.valves))
+	copy(valves, this.valves)
+	valves[index] = dest
+
+	return &State{valves, this.openValves, this.time, this.rate, this.pressure}
+}
+
+func (this *State) OpenValve(index int) *State {
+	valve := this.valves[index]
+	if valve.rate == 0 {
+		return nil
 	}
 
-	if this.openValves & this.valve.bit == this.valve.bit {
-		return nil // already open
+	if this.openValves & valve.bit == valve.bit {
+		return nil
 	}
 
-	openValves := this.openValves | this.valve.bit
-	time := this.time + 1
-	pressure := this.pressure + this.rate
-	rate := this.rate + this.valve.rate
+	openValves := this.openValves | valve.bit
+	rate := this.rate + valve.rate
 
-	return &State{ this.valve, openValves, time, rate, pressure }
+	return &State{ this.valves, openValves, this.time, rate, this.pressure }
 }
 
 func (this *State) Key() string {
-	return fmt.Sprintf("%s/%x", this.valve.name, this.openValves)
+	presentValves := uint64(0)
+	for _, valve := range this.valves {
+		presentValves |= valve.bit
+	}
+	return fmt.Sprintf("%x/%x", presentValves, this.openValves)
 }

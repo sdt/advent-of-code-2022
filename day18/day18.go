@@ -46,51 +46,65 @@ func main() {
 		cubes[i] = parseCube(line)
 	}
 
-	totalSurfaceArea := part1(cubes)
-	fmt.Println(totalSurfaceArea)
-
-	fmt.Println(part2(cubes, totalSurfaceArea))
+	fmt.Println(part1(cubes))
+	fmt.Println(part2(cubes))
 }
 
 func part1(cubes []*Cube) int {
 	return findSurfaceArea(cubes)
 }
 
-func part2(cubes []*Cube, totalSurfaceArea int) int {
+func part2(cubes []*Cube) int {
 	cubeMap := make(map[Vec3]bool)
 	for _, cube := range cubes {
 		cubeMap[cube.coords] = true
 	}
 
 	volume := makeVolume(cubes)
-	reachable := makeReachable(cubeMap, volume)
+	seen := make(map[Vec3]bool)
+	surfaceArea := 0
 
-	unreachable := make(map[Vec3]bool)
+	checkCell := func(pos Vec3) bool {
+		if !volume.contains(pos) {
+			return false
+		}
 
-	var p Vec3
-	for p[2] = volume.min[2]; p[2] <= volume.max[2]; p[2]++ {
-		for p[1] = volume.min[1]; p[1] <= volume.max[1]; p[1]++ {
-			for p[0] = volume.min[0]; p[0] <= volume.max[0]; p[0]++ {
-				if _, isCube := cubeMap[p]; isCube {
-					continue
-				}
-				if _, isReachable := reachable[p]; isReachable {
-					continue
-				}
+		if seen[pos] {
+			return false
+		}
 
-				unreachable[p] = true
+		if cubeMap[pos] {
+			// Gone from empty space to inside cube. We've crossed a new surface
+			// area face.
+			surfaceArea++
+			return false
+		}
+
+		// Still in unseen empty space
+		return true
+	}
+
+	var floodFill func(Vec3)
+	floodFill = func(pos Vec3) {
+		seen[pos] = true // mark this one off
+
+		for axis := range pos {
+			before := pos
+			before[axis]--
+			if checkCell(before) {
+				floodFill(before)
+			}
+
+			after := pos
+			after[axis]++
+			if checkCell(after) {
+				floodFill(after)
 			}
 		}
 	}
+	floodFill(volume.min)
 
-	unreachableCubes := make([]*Cube, len(unreachable))
-	i := 0
-	for coords := range unreachable {
-		unreachableCubes[i] = &Cube{ coords, All }
-		i++
-	}
-
-	return totalSurfaceArea - findSurfaceArea(unreachableCubes)
+	return surfaceArea
 }
 
 func findSurfaceArea(cubes []*Cube) int {
@@ -104,40 +118,6 @@ func findSurfaceArea(cubes []*Cube) int {
 	}
 
 	return area
-}
-
-func makeReachable(cubes map[Vec3]bool, volume BBox) map[Vec3]bool {
-	seen := make(map[Vec3]bool)
-
-	var floodFill func(Vec3)
-	floodFill = func(pos Vec3) {
-		if !volume.contains(pos) {
-			return // outside of the volume
-		}
-
-		if _, contains := cubes[pos]; contains {
-			return // hit an existing cube
-		}
-
-		if _, contains := seen[pos]; contains {
-			return // seen this one already
-		}
-
-		seen[pos] = true // mark this one off
-
-		for axis := range pos {
-			before := pos
-			before[axis]--
-			floodFill(before)
-
-			after := pos
-			after[axis]++
-			floodFill(after)
-		}
-	}
-	floodFill(volume.min)
-
-	return seen
 }
 
 func matchCubes(cubes []*Cube, axis int) {

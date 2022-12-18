@@ -37,6 +37,7 @@ func main() {
 	}
 
 	fmt.Println(part1(input))
+	fmt.Println(part2(input))
 }
 
 func part1(input string) int {
@@ -56,6 +57,37 @@ func part1(input string) int {
 	return chamber.height
 }
 
+// Actual height after 100k pieces = 156632
+// Wrapped at round 19664, piece 98320: 10077 -> 18. New pieces=1725 height=2702 (154004).
+// Wrapped at round 20009, piece 100045: 10077 -> 18. New pieces=1725 height=2702 (156706).
+
+func part2(moves string) int {
+	pieces := makePieces()
+	chamber := makeChamber()
+
+	startRounds, startMove := chamber.runLoop(pieces, moves, 0)
+	startHeight := chamber.height
+
+	loopRounds, loopMove := chamber.runLoop(pieces, moves, startMove)
+	loopHeight := chamber.height - startHeight
+
+	targetPieces := 1_000_000_000_000
+	targetRounds := targetPieces / len(pieces)
+
+	loops := (targetRounds - startRounds) / loopRounds
+
+	extraRounds := targetRounds - (startRounds + loops * loopRounds)
+
+	move := loopMove
+	for i := 0; i < extraRounds; i++ {
+		move = chamber.doRound(pieces, moves, move)
+	}
+
+	totalHeight := loopHeight * (loops - 1) + chamber.height
+
+	return totalHeight
+}
+
 func makePieces() []Piece {
 	return []Piece{
 		Piece{{0, 0}, {1, 0}, {2, 0}, {3, 0}},
@@ -68,6 +100,26 @@ func makePieces() []Piece {
 
 func makeChamber() *Chamber {
 	return &Chamber{ make(map[Vec2]bool), 0 }
+}
+
+func (this *Chamber) runLoop(pieces []Piece, moves string, startMove int) (round, move int) {
+	round = 0
+	move = startMove
+	for {
+		move = this.doRound(pieces, moves, move)
+		round++
+		if move < startMove {
+			return
+		}
+		startMove = move
+	}
+}
+
+func (this *Chamber) doRound(pieces []Piece, moves string, move int) int {
+	for _, piece := range pieces {
+		move = this.dropPiece(&piece, moves, move)
+	}
+	return move
 }
 
 func (this *Chamber) dropPiece(piece *Piece, moves string, move int) int {

@@ -25,25 +25,75 @@ const (
 	All		 = XMask | YMask | ZMask
 )
 
+type Vec3 [3]int
+
 type Cube struct {
-	coords	  [3]int
+	coords	  Vec3
 	openSides Side
+}
+
+type BBox struct {
+	min Vec3
+	max Vec3
 }
 
 func main() {
 	filename := aoc.GetFilename()
 	lines := aoc.GetInputLines(filename)
 
-	fmt.Println(part1(lines))
-}
-
-func part1(lines []string) int {
 	cubes := make([]*Cube, len(lines))
-
 	for i, line := range lines {
 		cubes[i] = parseCube(line)
 	}
 
+	totalSurfaceArea := part1(cubes)
+	fmt.Println(totalSurfaceArea)
+
+	fmt.Println(part2(cubes, totalSurfaceArea))
+}
+
+func part1(cubes []*Cube) int {
+	return findSurfaceArea(cubes)
+}
+
+func part2(cubes []*Cube, totalSurfaceArea int) int {
+	cubeMap := make(map[Vec3]bool)
+	for _, cube := range cubes {
+		cubeMap[cube.coords] = true
+	}
+
+	volume := makeVolume(cubes)
+	reachable := makeReachable(cubeMap, volume)
+
+	unreachable := make(map[Vec3]bool)
+
+	var p Vec3
+	for p[2] = volume.min[2]; p[2] <= volume.max[2]; p[2]++ {
+		for p[1] = volume.min[1]; p[1] <= volume.max[1]; p[1]++ {
+			for p[0] = volume.min[0]; p[0] <= volume.max[0]; p[0]++ {
+				if _, isCube := cubeMap[p]; isCube {
+					continue
+				}
+				if _, isReachable := reachable[p]; isReachable {
+					continue
+				}
+
+				unreachable[p] = true
+			}
+		}
+	}
+
+	unreachableCubes := make([]*Cube, len(unreachable))
+	i := 0
+	for coords := range unreachable {
+		unreachableCubes[i] = &Cube{ coords, All }
+		i++
+	}
+
+	return totalSurfaceArea - findSurfaceArea(unreachableCubes)
+}
+
+func findSurfaceArea(cubes []*Cube) int {
 	for axis := 0; axis < 3; axis++ {
 		matchCubes(cubes, axis)
 	}
@@ -54,6 +104,40 @@ func part1(lines []string) int {
 	}
 
 	return area
+}
+
+func makeReachable(cubes map[Vec3]bool, volume BBox) map[Vec3]bool {
+	seen := make(map[Vec3]bool)
+
+	var floodFill func(Vec3)
+	floodFill = func(pos Vec3) {
+		if !volume.contains(pos) {
+			return // outside of the volume
+		}
+
+		if _, contains := cubes[pos]; contains {
+			return // hit an existing cube
+		}
+
+		if _, contains := seen[pos]; contains {
+			return // seen this one already
+		}
+
+		seen[pos] = true // mark this one off
+
+		for axis := range pos {
+			before := pos
+			before[axis]--
+			floodFill(before)
+
+			after := pos
+			after[axis]++
+			floodFill(after)
+		}
+	}
+	floodFill(volume.min)
+
+	return seen
 }
 
 func matchCubes(cubes []*Cube, axis int) {
@@ -72,6 +156,20 @@ func matchCubes(cubes []*Cube, axis int) {
 			}
 		}
 	}
+}
+
+func makeVolume(cubes []*Cube) BBox {
+	bbox := newBBox(*cubes[0])
+	for _, cube := range cubes[1:] {
+		bbox = bbox.extend(*cube)
+	}
+
+	for i := range bbox.min {
+		bbox.min[i]--
+		bbox.max[i]++
+	}
+
+	return bbox
 }
 
 func isAdjacent(a, b *Cube, axis int) bool {
@@ -104,4 +202,44 @@ func (this Cube) SurfaceArea() int {
 		}
 	}
 	return area
+}
+
+func newBBox(cube Cube) BBox {
+	return BBox{ cube.coords, cube.coords }
+}
+
+func (this BBox) extend(cube Cube) BBox {
+	var bbox BBox
+	for axis, value := range cube.coords {
+		bbox.min[axis] = min(this.min[axis], value)
+		bbox.max[axis] = max(this.max[axis], value)
+	}
+	return bbox
+}
+
+func (this BBox) size(axis int) int {
+	return this.max[axis] - this.min[axis] + 1
+}
+
+func (this BBox) contains(p Vec3) bool {
+	for axis, value := range p {
+		if value < this.min[axis] || value > this.max[axis] {
+			return false
+		}
+	}
+	return true
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

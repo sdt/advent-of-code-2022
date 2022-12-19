@@ -20,7 +20,7 @@ const (
 )
 
 type RobotCost struct {
-	cost [MaterialCount]int
+	cost [MaterialCount]uint16
 }
 
 type Blueprint struct {
@@ -28,8 +28,8 @@ type Blueprint struct {
 }
 
 type State struct {
-	materialCount [MaterialCount]int
-	robotCount [MaterialCount]int
+	materialCount [MaterialCount]uint16
+	robotCount [MaterialCount]uint16
 }
 
 func main() {
@@ -42,23 +42,34 @@ func main() {
 	}
 
 	fmt.Println(part1(blueprints))
+	fmt.Println(part2(blueprints[0:3]))
 }
 
 func part1(blueprints []Blueprint) int {
 	totalQuality := 0
 	for i, blueprint := range blueprints {
-		quality := (i + 1) * runBlueprint(blueprint)
+		quality := (i + 1) * runBlueprint(blueprint, 24)
 		totalQuality += quality
 	}
 	return totalQuality
 }
 
-func runBlueprint(blueprint Blueprint) int {
+func part2(blueprints []Blueprint) int {
+	result := 1
+	for _, blueprint := range blueprints {
+		result *= runBlueprint(blueprint, 32)
+	}
+	return result
+}
+
+// 3096 is too low
+
+func runBlueprint(blueprint Blueprint, minutes int) int {
 	currentStates := make(map[State]bool)
 	currentStates[startState()] = true
 	nextStates := make(map[State]bool)
 
-	for minute := 1; minute <= 23; minute++ {
+	for minute := 1; minute <= minutes-1; minute++ {
 		//fmt.Printf("Minute %d: states %d\n", minute, len(currentStates))
 		for state := range currentStates {
 			for material := Material(0); material < MaterialCount; material++ {
@@ -79,15 +90,18 @@ func runBlueprint(blueprint Blueprint) int {
 		nextStates = make(map[State]bool)
 	}
 
-	max := 0
+	max := uint16(0)
 	for state := range currentStates {
+		if state.canBuild(blueprint, Geode, 1) {
+			state.robotCount[Geode]++
+		}
 		state = state.step()
 		if state.materialCount[Geode] > max {
 			max = state.materialCount[Geode]
 		}
 	}
 	//fmt.Println("Max =", max)
-	return max
+	return int(max)
 }
 
 func parseBlueprint(line string) Blueprint {
@@ -96,12 +110,12 @@ func parseBlueprint(line string) Blueprint {
 	var bp Blueprint
 
 	// [RobotType][Material]
-	bp.robot[Ore].cost[Ore]  = numbers[1]
-	bp.robot[Clay].cost[Ore] = numbers[2]
-	bp.robot[Obsidian].cost[Ore] = numbers[3]
-	bp.robot[Obsidian].cost[Clay] = numbers[4]
-	bp.robot[Geode].cost[Ore] = numbers[5]
-	bp.robot[Geode].cost[Obsidian] = numbers[6]
+	bp.robot[Ore].cost[Ore]  = uint16(numbers[1])
+	bp.robot[Clay].cost[Ore] = uint16(numbers[2])
+	bp.robot[Obsidian].cost[Ore] = uint16(numbers[3])
+	bp.robot[Obsidian].cost[Clay] = uint16(numbers[4])
+	bp.robot[Geode].cost[Ore] = uint16(numbers[5])
+	bp.robot[Geode].cost[Obsidian] = uint16(numbers[6])
 	return bp
 }
 
@@ -111,7 +125,7 @@ func startState() State {
 	return state
 }
 
-func (this State) canBuild(bp Blueprint, robot Material, count int) bool {
+func (this State) canBuild(bp Blueprint, robot Material, count uint16) bool {
 	for material, cost := range bp.robot[robot].cost {
 		if cost * count > this.materialCount[material] {
 			return false

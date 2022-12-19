@@ -69,20 +69,25 @@ func runBlueprint(blueprint Blueprint, minutes int) int {
 	currentStates[startState()] = true
 	nextStates := make(map[State]bool)
 
-	for minute := 1; minute <= minutes-1; minute++ {
+	for minute := 1; minute <= minutes; minute++ {
 		//fmt.Printf("Minute %d: states %d\n", minute, len(currentStates))
 		for state := range currentStates {
-			for material := Material(0); material < MaterialCount; material++ {
+			if state.canBuild(blueprint, Geode, 1) {
+				nextStates[ state.build(blueprint, Geode) ] = true
+				continue
+			}
+
+			if state.canBuild(blueprint, Obsidian, 1) {
+				nextStates[ state.build(blueprint, Obsidian) ] = true
+				continue
+			}
+			for material := Material(0); material <= Clay; material++ {
 				// Can't build a robot if you can't afford it.
 				// And if you can afford to build two, it's too late.
 				if !state.canBuild(blueprint, material, 1) || state.canBuild(blueprint, material, 2) {
 					continue
 				}
-				nextState := state.build(blueprint, material)
-				nextState = nextState.step()
-				nextState.robotCount[material]++
-
-				nextStates[nextState] = true
+				nextStates[ state.build(blueprint, material) ] = true
 			}
 			nextStates[state.step()] = true
 		}
@@ -92,10 +97,6 @@ func runBlueprint(blueprint Blueprint, minutes int) int {
 
 	max := uint16(0)
 	for state := range currentStates {
-		if state.canBuild(blueprint, Geode, 1) {
-			state.robotCount[Geode]++
-		}
-		state = state.step()
 		if state.materialCount[Geode] > max {
 			max = state.materialCount[Geode]
 		}
@@ -138,6 +139,10 @@ func (this State) build(bp Blueprint, robot Material) State {
 	for material, cost := range bp.robot[robot].cost {
 		this.materialCount[material] -= cost
 	}
+	for material, count := range this.robotCount {
+		this.materialCount[material] += count
+	}
+	this.robotCount[robot]++
 	return this
 }
 

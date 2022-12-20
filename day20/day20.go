@@ -21,19 +21,20 @@ func main() {
 }
 
 func part1(lines []string) int {
-	head := MakeEmpty[int]()
-	cursor := head
-	values := make([]*Node[int], len(lines))
 	var zero *Node[int]
+	nodes := make([]Node[int], len(lines))
+
+	nlines := len(lines)
+
 	for i, line := range lines {
-		value := aoc.ParseInt(line)
-		values[i] = &Node[int]{ value: value }
-		cursor = values[i].InsertAfter(cursor)
-		if value == 0 {
-			zero = cursor
+		nodes[i].value = aoc.ParseInt(line)
+		nodes[i].next = &nodes[(i + 1) % nlines]
+		nodes[i].prev = &nodes[(i + nlines - 1) % nlines]
+
+		if nodes[i].value == 0 {
+			zero = &nodes[i]
 		}
 	}
-	head.Unlink()
 
 	dump := func(start *Node[int]) {
 		return
@@ -45,7 +46,8 @@ func part1(lines []string) int {
 
 	dump(zero)
 
-	for _, node := range values {
+	for i := range nodes {
+		node := &nodes[i]
 		node.Move(node.value)
 		dump(zero)
 	}
@@ -61,19 +63,20 @@ func part1(lines []string) int {
 
 func part2(lines []string) int {
 	key := 811_589_153
-	head := MakeEmpty[int]()
-	cursor := head
-	values := make([]*Node[int], len(lines))
 	var zero *Node[int]
+	nodes := make([]Node[int], len(lines))
+
+	nlines := len(lines)
+
 	for i, line := range lines {
-		value := aoc.ParseInt(line) * key
-		values[i] = &Node[int]{ value: value }
-		cursor = values[i].InsertAfter(cursor)
-		if value == 0 {
-			zero = cursor
+		nodes[i].value = aoc.ParseInt(line) * key
+		nodes[i].next = &nodes[(i + 1) % nlines]
+		nodes[i].prev = &nodes[(i + nlines - 1) % nlines]
+
+		if nodes[i].value == 0 {
+			zero = &nodes[i]
 		}
 	}
-	head.Unlink()
 
 	dump := func(start *Node[int]) {
 		return
@@ -85,15 +88,15 @@ func part2(lines []string) int {
 
 	dump(zero)
 
-	mod := len(values) - 1
 	for i := 0; i < 10; i++ {
-		for _, node := range values {
+		for i := range nodes {
+			node := &nodes[i]
 			if node.value > 0 {
-				value := node.value % mod
-				node.MoveRight(value)
+				count := node.value % (nlines - 1)
+				node.MoveRight(count)
 			} else if node.value < 0 {
-				value := -node.value % mod
-				node.MoveLeft(value)
+				count := -node.value % (nlines - 1)
+				node.MoveLeft(count)
 			}
 		}
 		dump(zero)

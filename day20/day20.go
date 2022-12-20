@@ -17,6 +17,7 @@ func main() {
 	lines := aoc.GetInputLines(filename)
 
 	fmt.Println(part1(lines))
+	fmt.Println(part2(lines))
 }
 
 func part1(lines []string) int {
@@ -46,6 +47,55 @@ func part1(lines []string) int {
 
 	for _, node := range values {
 		node.Move(node.value)
+		dump(zero)
+	}
+
+	total := 0
+	for i := 0; i < 3; i++ {
+		zero = zero.Next(1000)
+		total += zero.value
+	}
+
+	return total
+}
+
+func part2(lines []string) int {
+	key := 811_589_153
+	head := MakeEmpty[int]()
+	cursor := head
+	values := make([]*Node[int], len(lines))
+	var zero *Node[int]
+	for i, line := range lines {
+		value := aoc.ParseInt(line) * key
+		values[i] = &Node[int]{ value: value }
+		cursor = values[i].InsertAfter(cursor)
+		if value == 0 {
+			zero = cursor
+		}
+	}
+	head.Unlink()
+
+	dump := func(start *Node[int]) {
+		return
+		start.Walk(func (node *Node[int]) {
+			fmt.Printf("%d ", node.value)
+		})
+		fmt.Println()
+	}
+
+	dump(zero)
+
+	mod := len(values) - 1
+	for i := 0; i < 10; i++ {
+		for _, node := range values {
+			if node.value > 0 {
+				value := node.value % mod
+				node.MoveRight(value)
+			} else if node.value < 0 {
+				value := -node.value % mod
+				node.MoveLeft(value)
+			}
+		}
 		dump(zero)
 	}
 

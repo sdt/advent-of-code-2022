@@ -35,6 +35,7 @@ func main() {
 	lines := aoc.GetInputLines(filename)
 
 	fmt.Println(part1(lines))
+	fmt.Println(part2(lines))
 }
 
 func part1(lines []string) int {
@@ -56,6 +57,22 @@ func part1(lines []string) int {
 	total := (max.x - min.x + 1) * (max.y - min.y + 1)
 
 	return total - len(current)
+}
+
+func part2(lines []string) int {
+	current := parseInput(lines)
+	//current.Print()
+
+	for round := 0; ; round++ {
+		next, changed := step(current, round%len(directions))
+		//fmt.Println("After round", round+1)
+		if !changed {
+			//fmt.Println("No more changes")
+			return round + 1
+		}
+		//next.Print()
+		current = next
+	}
 }
 
 func step(current ElfMap, heading int) (ElfMap, bool) {

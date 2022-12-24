@@ -28,14 +28,41 @@ func main() {
 	lines := aoc.GetInputLines(filename)
 
 	fmt.Println(part1(lines))
+	fmt.Println(part2(lines))
 }
 
 func part1(lines []string) int {
-	current := parseMap(lines)
-	//current.Print()
+	m := parseMap(lines)
 
+	startPos := Vec2{ 0, -1 }
+	endPos := Vec2{ int8(m.Width() - 1), int8(m.Height()) }
+
+	minutes, _ := run(m, startPos, endPos)
+
+	return minutes
+}
+
+func part2(lines []string) int {
+	m := parseMap(lines)
+
+	startPos := Vec2{ 0, -1 }
+	endPos := Vec2{ int8(m.Width() - 1), int8(m.Height()) }
+
+	totalMinutes := 0
+
+	for i := 0; i < 3; i++ {
+		minutes, nextM := run(m, startPos, endPos)
+		totalMinutes += minutes
+		startPos, endPos = endPos, startPos
+		m = nextM
+	}
+
+	return totalMinutes
+}
+
+func run(current *Map, startPos, endPos Vec2) (int, *Map) {
 	locations := make(map[Vec2]bool)
-	locations[ current.startPos() ] = true
+	locations[ startPos ] = true
 	minute := 0
 
 	moves := [...]Vec2{ {0,0}, {-1,0}, {1,0}, {0,1}, {0,-1} }
@@ -50,10 +77,10 @@ func part1(lines []string) int {
 		for location := range locations {
 			for _, move := range moves {
 				nextLocation := location.Add(move)
-				if next.isGoal(nextLocation) {
-					return minute
+				if nextLocation == endPos {
+					return minute, next
 				}
-				if next.canMove(nextLocation) {
+				if nextLocation == startPos || next.canMove(nextLocation) {
 					//fmt.Printf("Moving from %v to %v\n", location, nextLocation)
 					nextLocations[nextLocation] = true
 				}
@@ -65,7 +92,7 @@ func part1(lines []string) int {
 
 		//fmt.Printf("Minute %d: %d locations\n", minute, len(locations))
 	}
-	return minute
+	return minute, current
 }
 
 func makeMap(w, h int) *Map {
@@ -150,19 +177,7 @@ func (this *Map) Print() {
 	fmt.Println()
 }
 
-func (this *Map) isGoal(p Vec2) bool {
-	return int(p.x) == this.Width() - 1 && int(p.y) == this.Height()
-}
-
-func (this *Map) startPos() Vec2 {
-	return Vec2{ 0, -1 }
-}
-
 func (this *Map) canMove(p Vec2) bool {
-	if p == this.startPos() {
-		return true // home position
-	}
-
 	x := int(p.x)
 	y := int(p.y)
 

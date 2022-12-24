@@ -5,6 +5,89 @@ import (
 	"fmt"
 )
 
+/*
+	Top row
+
+	U0 R0 D2 L0 ...
+    |  |  |  |
+	|  |  |  F1 U1 B1 D1
+	|  |  |
+	|  |  F2 L1 B0 R3
+	|  |
+	|  F3 D3 B3 U3
+	|
+	F0 R1 B2 L3
+
+	   rt dn
+	U0 R0 F0
+	U1 B1 R1
+	U2 L2 B2
+	U3 F3 L3
+
+	B0 R3 U0
+	B1 D1 R0
+	B2 L3 D2
+	B3 U3 L0
+
+	D0 R2 B0
+	D1 F1 R3
+	D2 L0 F2
+	D3 B3 L1
+
+	F0 R1 D0
+	F1 U1 R2
+	F2 L1 U2
+	F3 D3 L2
+
+ 	L0 U0 F1
+	L1 B0 U1
+	L2 D0 B1
+	L3 F0 D1
+
+	R0 D2 F3
+	R1 B2 D3
+	R2 U2 B3
+	R3 F2 U3
+*/
+
+/* Canonical unfold. All sides at rot=0
+       +--+
+       |F3|
+       +--+
+       |D2|
+       +--+
+       |B1|
+    +--+--+--+
+    |L4|U0|R5|
+    +--+--+--+
+*/
+
+type CubeSide uint8
+const (
+	U = iota
+	B
+	D
+	F
+	L
+	R
+)
+
+type Rotation uint8
+
+type CubeRotation struct {
+	side CubeSide
+	rotation Rotation
+}
+
+var rightFace = map[CubeRotation]CubeRotation{
+	{U,0}: {R,0}, {U,1}: {B,1}, {U,2}: {L,2}, {U,3}: {F,3},
+	{B,0}: {R,3}, {B,1}: {D,1}, {B,2}: {L,3}, {B,3}: {U,3},
+	{D,0}: {R,2}, {D,1}: {F,1}, {D,2}: {L,0}, {D,3}: {B,3},
+	{F,0}: {R,1}, {F,1}: {U,1}, {F,2}: {L,1}, {F,3}: {D,3},
+ 	{L,0}: {U,0}, {L,1}: {B,0}, {L,2}: {D,0}, {L,3}: {F,0},
+	{R,0}: {D,2}, {R,1}: {B,2}, {R,2}: {U,2}, {R,3}: {F,2},
+}
+
 type Vec2 struct {
 	x, y int
 }
@@ -114,6 +197,28 @@ func (this Grid[T]) offset(x, y int) int {
 
 func (this Grid[T]) Contains(x, y int) bool {
 	return x >= 0 && y >= 0 && x < this.w && y < this.h
+}
+
+func (this Grid[T]) Rotate(count int) Grid[T] {
+	n := count % 4
+	if n < 0 {
+		n += 4
+	}
+
+	switch n {
+
+	case 0: return this.Rotate0()
+	case 1: return this.Rotate90()
+	case 2: return this.Rotate180()
+	case 3: return this.Rotate270()
+
+	}
+
+	panic(n)
+}
+
+func (this Grid[T]) Rotate0() Grid[T] {
+	return this
 }
 
 func (this Grid[T]) Rotate90() Grid[T] {

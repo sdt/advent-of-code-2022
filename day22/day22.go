@@ -72,6 +72,8 @@ const (
 	R
 )
 
+var sideName = [...]string{ "U", "B", "D", "F", "L", "R" }
+
 type Rotation uint8
 
 type CubeRotation struct {
@@ -84,12 +86,28 @@ var rightFace = map[CubeRotation]CubeRotation{
 	{B,0}: {R,3}, {B,1}: {D,1}, {B,2}: {L,3}, {B,3}: {U,3},
 	{D,0}: {R,2}, {D,1}: {F,1}, {D,2}: {L,0}, {D,3}: {B,3},
 	{F,0}: {R,1}, {F,1}: {U,1}, {F,2}: {L,1}, {F,3}: {D,3},
- 	{L,0}: {U,0}, {L,1}: {B,0}, {L,2}: {D,0}, {L,3}: {F,0},
+	{L,0}: {U,0}, {L,1}: {B,0}, {L,2}: {D,0}, {L,3}: {F,0},
 	{R,0}: {D,2}, {R,1}: {B,2}, {R,2}: {U,2}, {R,3}: {F,2},
 }
 
+var downFace = map[CubeRotation]CubeRotation{
+	{U,0}: {F,0}, {U,1}: {R,1}, {U,2}: {B,2}, {U,3}: {L,3},
+	{B,0}: {U,0}, {B,1}: {R,0}, {B,2}: {D,2}, {B,3}: {L,0},
+	{D,0}: {B,0}, {D,1}: {R,3}, {D,2}: {F,2}, {D,3}: {L,1},
+	{F,0}: {D,0}, {F,1}: {R,2}, {F,2}: {U,2}, {F,3}: {L,2},
+	{L,0}: {F,1}, {L,1}: {U,1}, {L,2}: {B,1}, {L,3}: {D,1},
+	{R,0}: {F,3}, {R,1}: {D,3}, {R,2}: {B,3}, {R,3}: {U,3},
+}
+
+// leftFace is the reverse mapping of rightface
+var leftFace = ReverseMap(rightFace)
+
 type Vec2 struct {
 	x, y int
+}
+
+func (this Vec2) Add(that Vec2) Vec2 {
+	return Vec2{ this.x + that.x, this.y + that.y }
 }
 
 type Tile struct {
@@ -102,7 +120,19 @@ type Face struct {
 }
 
 type FaceSet struct {
-	face map[Vec2]Face
+	face map[Vec2]*Face
+}
+
+// The cube is represented as an array of six faces.
+// Each face has four rotations precomputed.
+// The 0 rotation matches the canonical representation. The rest are the CW
+// rotations from the previous.
+type Cube struct {
+	face [6][4]*Face
+}
+
+type CubeOrientation struct {
+	cubeRot [6]CubeRotation
 }
 
 // tile size = (X + Y) / 7
@@ -115,11 +145,73 @@ func main() {
 }
 
 func part2(lines []string) int {
-	faceSet := parseFaceSet(lines)
+	// We start facing up, so always insert an R
+	cube := buildCube(parseFaceSet(lines[:len(lines)-2]))
+	orientation := NewCubeOrientation()
+	moves := "R" + lines[len(lines)-1]
+	pos := Vec2{ 0, 0 }
+	size := cube.face[0][0].tile.w
 
-	fmt.Println(faceSet)
+	DrawCube(&cube, &orientation)
 
-	return len(faceSet.face)
+	GetTile := func(p Vec2, face int) Tile {
+		cr := orientation.cubeRot[face]
+		f := cube.face[cr.side][cr.rotation]
+		return f.tile.Get(p.x, p.y)
+	}
+
+	for len(moves) > 0 {
+		turn, nextMoves := getTurn(moves)
+		moves = nextMoves
+
+		switch turn {
+		case 'R':
+			orientation = TurnRight(orientation)
+			// 1,2 -> 2,S-1-1
+			pos = Vec2{ pos.y, size - pos.x - 1 }
+
+		case 'L':
+			orientation = TurnLeft(orientation)
+			// 1,2 -> S-1-1, 2
+			pos = Vec2{ size - pos.y - 1, pos.x }
+
+		default: panic(turn)
+		}
+		fmt.Printf("Turn %c: %d,%d\n", turn, pos.x, pos.y)
+		DrawCube(&cube, &orientation)
+
+
+		distance, nextMoves := getMoveDistance(moves)
+		fmt.Println("Move:", distance)
+		moves = nextMoves
+		for i := 0; i < distance; i++ {
+			if pos.y > 0 {
+				nextPos := pos.Add(Vec2{ 0, -1 })
+				if !GetTile(nextPos, 0).isOpen {
+					fmt.Printf("Step %d of %d: blocked at %d,%d\n", i+1, distance, pos.x, pos.y)
+					break
+				}
+				pos = nextPos
+				fmt.Printf("Step %d of %d: %d,%d\n", i+1, distance, pos.x, pos.y)
+				DrawCube(&cube, &orientation)
+			} else {
+				nextPos := Vec2{ pos.x, size - 1 }
+				if !GetTile(nextPos, 1).isOpen {
+					fmt.Printf("Step %d of %d: blocked around corner at %d,%d\n", i+1, distance, pos.x, pos.y)
+					break
+				}
+				orientation = RollForward(orientation)
+				pos = nextPos
+				fmt.Printf("Step %d of %d: %d,%d\n", i+1, distance, pos.x, pos.y)
+				DrawCube(&cube, &orientation)
+			}
+		}
+	}
+
+	final := GetTile(pos, 0)
+	fmt.Printf("Final position: row=%d,col=%d\n", final.row, final.col)
+
+	return len(cube.face)
 }
 
 func parseFaceSet(lines []string) FaceSet {
@@ -136,7 +228,7 @@ func parseFaceSet(lines []string) FaceSet {
 	xTiles := w / tileSize
 	yTiles := h / tileSize
 
-	faceSet := FaceSet{ make(map[Vec2]Face) }
+	faceSet := FaceSet{ make(map[Vec2]*Face) }
 
 	for yTile := 0; yTile < yTiles; yTile++ {
 		for xTile := 0; xTile < xTiles; xTile++ {
@@ -150,7 +242,7 @@ func parseFaceSet(lines []string) FaceSet {
 				continue
 			}
 
-			face := Face{ NewGrid[Tile](tileSize, tileSize) }
+			face := NewFace(tileSize)
 			for y := 0; y < tileSize; y++ {
 				for x := 0; x < tileSize; x++ {
 					row := uint8(yOffset + y + 1)
@@ -168,6 +260,72 @@ func parseFaceSet(lines []string) FaceSet {
 	return faceSet
 }
 
+func buildCube(faceSet FaceSet) Cube {
+
+	var cube Cube
+
+	// First, find the up face. It will be the lowest X,0.
+	var up Vec2
+	for x := 0; ; x++ {
+		up = Vec2{x, 0}
+		if face, found := faceSet.face[up]; found {
+			delete(faceSet.face, up)
+			fmt.Printf("Face %s is %d,%d at rotation %d\n", sideName[U], up.x, up.y, 0)
+			setFace(&cube, face, CubeRotation{U,0})
+			break
+		}
+	}
+
+	var flood func(Vec2, CubeRotation)
+	flood = func(pos Vec2, rot CubeRotation) {
+
+		var nextPos Vec2
+		var nextRot CubeRotation
+
+		// Try the square to the right
+		nextPos = pos.Add(Vec2{1, 0})
+		if face, found := faceSet.face[nextPos]; found {
+			nextRot = rightFace[rot]
+			delete(faceSet.face, nextPos)
+			setFace(&cube, face, nextRot)
+			fmt.Printf("Face %s is %d,%d at rotation %d\n", sideName[nextRot.side], nextPos.x, nextPos.y, nextRot.rotation)
+			flood(nextPos, nextRot)
+		}
+
+		// Try the square to the left
+		nextPos = pos.Add(Vec2{-1, 0})
+		if face, found := faceSet.face[nextPos]; found {
+			nextRot = leftFace[rot]
+			delete(faceSet.face, nextPos)
+			setFace(&cube, face, nextRot)
+			fmt.Printf("Face %s is %d,%d at rotation %d\n", sideName[nextRot.side], nextPos.x, nextPos.y, nextRot.rotation)
+			flood(nextPos, nextRot)
+		}
+
+		// Try the square down
+		nextPos = pos.Add(Vec2{0, 1})
+		if face, found := faceSet.face[nextPos]; found {
+			nextRot = downFace[rot]
+			delete(faceSet.face, nextPos)
+			setFace(&cube, face, nextRot)
+			fmt.Printf("Face %s is %d,%d at rotation %d\n", sideName[nextRot.side], nextPos.x, nextPos.y, nextRot.rotation)
+			flood(nextPos, nextRot)
+		}
+
+
+	}
+	flood(up, CubeRotation{U,0})
+
+	return cube
+}
+
+func setFace(cube *Cube, face* Face, cubeRot CubeRotation) {
+	for i := 0; i < 4; i++ {
+		cube.face[cubeRot.side][(int(cubeRot.rotation) + i) % 4] = face
+		face = rotateFace(face)
+	}
+}
+
 type Grid[T any] struct {
 	w, h int
 	cell []T
@@ -181,6 +339,10 @@ func NewGrid[T any](w, h int) Grid[T] {
 	}
 
 	return grid
+}
+
+func NewFace(size int) *Face {
+	return &Face{ NewGrid[Tile](size, size) }
 }
 
 func (this Grid[T]) Get(x, y int) T {
@@ -199,58 +361,16 @@ func (this Grid[T]) Contains(x, y int) bool {
 	return x >= 0 && y >= 0 && x < this.w && y < this.h
 }
 
-func (this Grid[T]) Rotate(count int) Grid[T] {
-	n := count % 4
-	if n < 0 {
-		n += 4
-	}
-
-	switch n {
-
-	case 0: return this.Rotate0()
-	case 1: return this.Rotate90()
-	case 2: return this.Rotate180()
-	case 3: return this.Rotate270()
-
-	}
-
-	panic(n)
+func rotateFace(face* Face) *Face {
+	return &Face{ face.tile.RotateCW() }
 }
 
-func (this Grid[T]) Rotate0() Grid[T] {
-	return this
-}
-
-func (this Grid[T]) Rotate90() Grid[T] {
+func (this Grid[T]) RotateCW() Grid[T] {
 	that := NewGrid[T](this.h, this.w)
 
 	for y := 0; y < this.h; y++ {
 		for x := 0; x < this.w; x++ {
 			that.Set(that.w - y - 1, x, this.Get(x, y))
-		}
-	}
-
-	return that
-}
-
-func (this Grid[T]) Rotate180() Grid[T] {
-	that := NewGrid[T](this.w, this.h)
-
-	for y := 0; y < this.h; y++ {
-		for x := 0; x < this.w; x++ {
-			that.Set(this.w - x - 1, this.h - y - 1, this.Get(x, y))
-		}
-	}
-
-	return that
-}
-
-func (this Grid[T]) Rotate270() Grid[T] {
-	that := NewGrid[T](this.h, this.w)
-
-	for y := 0; y < this.h; y++ {
-		for x := 0; x < this.w; x++ {
-			that.Set(y, that.h - x - 1, this.Get(x, y))
 		}
 	}
 
@@ -266,4 +386,131 @@ func (this Grid[T]) Print(format string) {
 		fmt.Println()
 	}
 	fmt.Println()
+}
+
+func ReverseMap[T comparable](from map[T]T) map[T]T {
+	to := make(map[T]T)
+
+	for k, v := range from {
+		to[v] = k
+	}
+	return to
+}
+
+func NewCubeOrientation() CubeOrientation {
+	return CubeOrientation{ [...]CubeRotation{
+		{U, 0}, {B, 0}, {D, 0},
+		{F, 0}, {L, 0}, {R, 0},
+	} }
+}
+
+func RollForward(orientation CubeOrientation) CubeOrientation {
+	cr := orientation.cubeRot;
+	return CubeOrientation{ [...]CubeRotation{
+		cr[1], // 1 -> 0
+		cr[2], // 2 -> 1
+		cr[3], // 3 -> 2
+		cr[0], // 0 -> 3
+		{ cr[4].side, (cr[4].rotation + 1) % 4 },
+		{ cr[5].side, (cr[5].rotation + 3) % 4 },
+	}}
+}
+
+func TurnRight(orientation CubeOrientation) CubeOrientation {
+	cr := orientation.cubeRot
+	side := func(index, rot int) CubeRotation {
+		return CubeRotation{
+			cr[index].side,
+			Rotation((int(cr[index].rotation) + rot + 4) % 4),
+		}
+	}
+	return CubeOrientation{ [...]CubeRotation{
+		side(0, -1),
+		side(5, -1),
+		side(2,  1),
+		side(4, -1),
+		side(1, -1),
+		side(3, -1),
+	}}
+}
+
+func TurnLeft(orientation CubeOrientation) CubeOrientation {
+	cr := orientation.cubeRot
+	side := func(index, rot int) CubeRotation {
+		return CubeRotation{
+			cr[index].side,
+			Rotation((int(cr[index].rotation) + rot + 4) % 4),
+		}
+	}
+	return CubeOrientation{ [...]CubeRotation{
+		side(0,  1),
+		side(4,  1),
+		side(2, +1),
+		side(5,  1),
+		side(3,  1),
+		side(1,  1),
+	}}
+}
+
+func DrawCube(cube *Cube, orientation* CubeOrientation) {
+	size := cube.face[0][0].tile.w
+
+	drawRow := func(face* Face, y int) {
+		for x := 0; x < size; x++ {
+			tile := face.tile.Get(x, y)
+			if tile.isOpen {
+				fmt.Printf("%c", '.')
+			} else {
+				fmt.Printf("%c", '#')
+			}
+		}
+	}
+
+	drawGap := func() {
+		for x := 0; x < size+1; x++ {
+			fmt.Printf("%c", ' ')
+		}
+	}
+
+	for i := 3; i >= 1; i-- {
+		cubeRot := orientation.cubeRot[i]
+		face := cube.face[cubeRot.side][cubeRot.rotation]
+
+		for row := 0; row < size; row++ {
+			drawGap()
+			drawRow(face, row)
+			fmt.Println()
+		}
+		fmt.Println()
+	}
+
+	faces := [...]int{4, 0, 5}
+	for row := 0; row < size; row++ {
+		for _, i := range faces {
+			cubeRot := orientation.cubeRot[i]
+			face := cube.face[cubeRot.side][cubeRot.rotation]
+
+			drawRow(face, row)
+			fmt.Print(" ")
+		}
+		fmt.Println()
+	}
+	fmt.Println()
+}
+
+
+func getMoveDistance(moves string) (int, string) {
+	distance := 0
+	for len(moves) > 0 && moves[0] >= '0' && moves[0] <= '9' {
+		distance = distance * 10 + int(moves[0] - '0')
+		moves = moves[1:]
+	}
+	return distance, moves
+}
+
+func getTurn(moves string) (byte, string) {
+	turn := moves[0]
+	moves = moves[1:]
+
+	return turn, moves
 }

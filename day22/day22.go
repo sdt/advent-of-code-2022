@@ -185,6 +185,7 @@ func part2(lines []string) int {
 		fmt.Println("Move:", distance)
 		moves = nextMoves
 		for i := 0; i < distance; i++ {
+			fmt.Printf("row,col=%d,%d\n", GetTile(pos, 0).row, GetTile(pos, 0).col)
 			if pos.y > 0 {
 				nextPos := pos.Add(Vec2{ 0, -1 })
 				if !GetTile(nextPos, 0).isOpen {
@@ -202,16 +203,18 @@ func part2(lines []string) int {
 				}
 				orientation = RollForward(orientation)
 				pos = nextPos
-				fmt.Printf("Step %d of %d: %d,%d\n", i+1, distance, pos.x, pos.y)
+				fmt.Printf("Jump %d of %d: %d,%d\n", i+1, distance, pos.x, pos.y)
 				DrawCube(&cube, &orientation)
 			}
 		}
 	}
 
 	final := GetTile(pos, 0)
-	fmt.Printf("Final position: row=%d,col=%d\n", final.row, final.col)
+	fmt.Printf("Final position: face=%d row=%d,col=%d dir=%d\n", orientation.cubeRot[0].side, final.row, final.col, (orientation.cubeRot[0].rotation + 0) % 4)
 
-	return len(cube.face)
+	return int(final.row) * 1000 +
+		   int(final.col) * 4 +
+		   int(orientation.cubeRot[0].rotation)
 }
 
 func parseFaceSet(lines []string) FaceSet {
@@ -445,7 +448,7 @@ func TurnLeft(orientation CubeOrientation) CubeOrientation {
 	return CubeOrientation{ [...]CubeRotation{
 		side(0,  1),
 		side(4,  1),
-		side(2, +1),
+		side(2, -1),
 		side(5,  1),
 		side(3,  1),
 		side(1,  1),
@@ -453,6 +456,7 @@ func TurnLeft(orientation CubeOrientation) CubeOrientation {
 }
 
 func DrawCube(cube *Cube, orientation* CubeOrientation) {
+	return
 	size := cube.face[0][0].tile.w
 
 	drawRow := func(face* Face, y int) {
@@ -514,3 +518,8 @@ func getTurn(moves string) (byte, string) {
 
 	return turn, moves
 }
+
+// 142383 too high
+// 142380 correct, but hmmmm
+// 142381
+// 142382
